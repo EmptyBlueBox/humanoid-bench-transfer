@@ -45,12 +45,19 @@ class HumanoidNumpyEnv():
 
         self.left_target_idxs = range(self.model.nq - 14, self.model.nq - 11)
         self.right_target_idxs = range(self.model.nq - 7, self.model.nq - 4)
-            
-        print('Body Idxs: ', self.body_idxs)
-        print('Body Vel Idxs: ', self.body_vel_idxs)
-        print('Act Idxs: ', self.act_idxs)
-        print('Left Target Idxs: ', self.left_target_idxs)
-        print('Right Target Idxs: ', self.right_target_idxs)
+        
+        joint_names = [mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_JOINT, i) for i in range(self.model.njnt)]
+        from humanoid_bench.trajectory_saver import TrajectorySaver
+        self.trajectory_saver = TrajectorySaver(joint_names[1:20])
+        print(f'Joint names: {joint_names}, shape: {len(joint_names)}')
+        print(f'Qpos: {self.data.qpos.shape}')
+        print(f'Qvel: {self.data.qvel.shape}')
+        body_names = [mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_JOINT, i) for i in self.body_idxs]
+        print(f'Body Idxs: {self.body_idxs}, length: {len(self.body_idxs)}, names: {body_names}')
+        print(f'Body Vel Idxs: {self.body_vel_idxs}, length: {len(self.body_vel_idxs)}')
+        print(f'Act Idxs: {self.act_idxs}, length: {len(self.act_idxs)}')
+        print(f'Left Target Idxs: {self.left_target_idxs}, length: {len(self.left_target_idxs)}')
+        print(f'Right Target Idxs: {self.right_target_idxs}, length: {len(self.right_target_idxs)}')
 
         self.task = task
 
@@ -171,6 +178,10 @@ class HumanoidNumpyEnv():
         """Observes humanoid body position, velocities, and angles."""
         offset = np.array([data.qpos[0], data.qpos[1], 0])
         if self.task == 'reach':
+            # print(f'root translation: {data.qpos.copy()[self.body_idxs][:3]}')
+            # print(f'root rotation: {data.qpos.copy()[self.body_idxs][3:7]}')
+            # print(f'dof: {data.qpos.copy()[self.body_idxs][7:26]}')
+            self.trajectory_saver.update_trajectory(data.qpos.copy()[self.body_idxs][:26])
             return np.concatenate(
                 (
                     data.qpos.copy()[self.body_idxs][2:],
