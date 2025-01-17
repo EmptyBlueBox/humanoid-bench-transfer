@@ -25,7 +25,9 @@ parser.add_argument("--seed", type=int)
 parser.add_argument("--num_envs", default=4, type=int)
 parser.add_argument("--learning_rate", default=3e-5, type=float)
 parser.add_argument("--max_steps", default=20000000, type=int)
-parser.add_argument("--wandb_entity", default="HumanoidBench", type=str)
+parser.add_argument("--wandb_entity", default="change this to your wandb entity, like lyt0112-peking-university", type=str)
+parser.add_argument("--model_path", default="/home/descfly/humanoid-bench-transfer/models/k7teg6s0/model.zip", type=str)
+parser.add_argument("--train_or_test", default="train", type=str)
 ARGS = parser.parse_args()
 
 
@@ -155,28 +157,113 @@ class EpisodeLogCallback(BaseCallback):
                 self.returns_info[key] = []
 
 
-def main(argv):
+def visualize_policy(model, env_name, num_episodes=5):
+    """
+    Visualize the trained policy by running episodes and saving videos locally and to wandb.
+    
+    Args:
+        model: Trained PPO model
+        env_name: Name of the environment
+        num_episodes: Number of episodes to visualize
+    """
+    import os
+    import imageio  # Add this import at the top of the file
+    
+    # Create videos directory if it doesn't exist
+    os.makedirs("videos", exist_ok=True)
+    
+    env = gym.make(env_name)
+    env = TimeLimit(env, max_episode_steps=1000)
+    
+    for episode in range(num_episodes):
+        obs, _ = env.reset()
+        done = False
+        truncated = False
+        episode_frames = []
+        
+        while not (done or truncated):
+            action = model.predict(obs, deterministic=True)[0]
+            obs, reward, done, truncated, info = env.step(action)
+            frame = env.render()
+            episode_frames.append(frame)
+        
+        # Convert frames to video and save
+        video = np.stack(episode_frames)
+        
+        # Save locally as MP4
+        video_path = f"videos/episode_{episode}.mp4"
+        imageio.mimsave(video_path, episode_frames, fps=100)
+        print(f"Saved video to {video_path}")
+        
+        # Also log to wandb
+        wandb.log({f"evaluation/episode_{episode}_video": wandb.Video(video, fps=100, format="gif")})
+    
+    env.close()
 
+def train(run, model, max_steps):
+    """
+    Train the PPO agent.
+    
+    Args:
+        env_name: Name of the environment
+        num_envs: Number of parallel environments
+        learning_rate: Learning rate for PPO
+        max_steps: Maximum number of training steps
+        wandb_entity: WandB entity name
+    
+    Returns:
+        trained model
+    """
+    model.learn(total_timesteps=max_steps, log_interval=1, 
+               callback=[WandbCallback(model_save_path=f"models/{run.id}",verbose=2), 
+                        EvalCallback(), LogCallback(info_keywords=[]), 
+                        EpisodeLogCallback()])
+    
+    model.save("ppo")
+    print("Training finished")
+    return model
+
+def test(model, env_name, num_episodes=5):
+    """
+    Test and visualize the trained policy.
+    
+    Args:
+        model: Trained PPO model
+        env_name: Name of the environment
+        num_episodes: Number of episodes to visualize
+    """
+    print("Starting visualization...")
+    visualize_policy(model, env_name, num_episodes)
+    print("Visualization completed")
+
+def main(argv):
     env = SubprocVecEnv([make_env(i) for i in range(ARGS.num_envs)])
     
-    steps = 1000
-        
     run = wandb.init(
         entity=ARGS.wandb_entity,
         project="humanoid-bench",
         name=f"ppo_{ARGS.env_name}",
-        sync_tensorboard=True,  # auto-upload sb3's tensorboard metrics
-        monitor_gym=True,  # auto-upload the videos of agents playing the game
-        save_code=True,  # optional
+        sync_tensorboard=True,
+        monitor_gym=True,
+        save_code=True,
     )
     
-    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=f"runs/{run.id}", learning_rate=float(ARGS.learning_rate), batch_size=512)
-    model.learn(total_timesteps=ARGS.max_steps, log_interval=1, callback=[WandbCallback(model_save_path=f"models/{run.id}",verbose=2), EvalCallback(), LogCallback(info_keywords=[]), EpisodeLogCallback()])
+    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=f"runs/{run.id}", 
+                learning_rate=float(ARGS.learning_rate), batch_size=512)
     
-    
-    model.save("ppo")
-    print("Training finished")
+    if ARGS.train_or_test == "train":
+        # Train the model, comment out to use existing model
+        model = train(
+            run,
+            model,
+            ARGS.max_steps
+        )
+    elif ARGS.train_or_test == "test":
+        # Test the trained model
+        model = PPO.load(ARGS.model_path)
+        test(model, ARGS.env_name)
+    else:
+        raise ValueError(f"Invalid value for train_or_test: {ARGS.train_or_test}")
 
 if __name__ == '__main__':
-#   app.run(main)
     main(None)

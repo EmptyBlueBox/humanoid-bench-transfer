@@ -18,3 +18,6 @@ wandb
 
 *.pkl
 *.txt
+*.zip
+*.png
+*.mp4
