@@ -167,9 +167,8 @@ def visualize_policy(model, env_name, num_episodes=5):
         num_episodes: Number of episodes to visualize
     """
     import os
-    import imageio  # Add this import at the top of the file
+    import imageio
     
-    # Create videos directory if it doesn't exist
     os.makedirs("videos", exist_ok=True)
     
     env = gym.make(env_name)
@@ -195,7 +194,6 @@ def visualize_policy(model, env_name, num_episodes=5):
         imageio.mimsave(video_path, episode_frames, fps=100)
         print(f"Saved video to {video_path}")
         
-        # Also log to wandb
         wandb.log({f"evaluation/episode_{episode}_video": wandb.Video(video, fps=100, format="gif")})
     
     env.close()
@@ -252,14 +250,12 @@ def main(argv):
                 learning_rate=float(ARGS.learning_rate), batch_size=512)
     
     if ARGS.train_or_test == "train":
-        # Train the model, comment out to use existing model
         model = train(
             run,
             model,
             ARGS.max_steps
         )
     elif ARGS.train_or_test == "test":
-        # Test the trained model
         model = PPO.load(ARGS.model_path)
         test(model, ARGS.env_name)
     else:
