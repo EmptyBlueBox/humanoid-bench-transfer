@@ -1,5 +1,6 @@
 class H1:
     dof = 26
+    name = "h1"
 
     def __init__(self, env=None):
         self._env = env
@@ -74,16 +75,21 @@ class H1:
 
 class H1Hand(H1):
     dof = 76
+    name = "h1_hand"
 
 class H1SimpleHand(H1):
     dof = 52    
+    name = "h1_simple_hand"
 
 class H1Touch(H1):
     dof = 76
+    name = "h1_touch"
 
 class H1Strong(H1):
     dof = 76
+    name = "h1_strong"
 
 
 class G1 (H1):
     dof = 44
+    name = "g1"
