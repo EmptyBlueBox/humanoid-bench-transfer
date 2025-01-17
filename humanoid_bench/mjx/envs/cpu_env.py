@@ -153,6 +153,10 @@ class HumanoidNumpyEnv():
         """Applies an action to the environment."""
         action = np.clip(action, -1.0, 1.0)
         action = self.unnorm_action(action)
+        
+        # save action
+        self.trajectory_saver.update_action_trajectory(action)
+        
         self.data.ctrl[self.act_idxs] = action
         mujoco.mj_step(self.model, self.data, nstep=self._physics_steps_per_control_step)
 
@@ -181,7 +185,10 @@ class HumanoidNumpyEnv():
             # print(f'root translation: {data.qpos.copy()[self.body_idxs][:3]}')
             # print(f'root rotation: {data.qpos.copy()[self.body_idxs][3:7]}')
             # print(f'dof: {data.qpos.copy()[self.body_idxs][7:26]}')
-            self.trajectory_saver.update_trajectory(data.qpos.copy()[self.body_idxs][:26])
+            
+            # save state
+            self.trajectory_saver.update_dof_trajectory(data.qpos.copy()[self.body_idxs][:26])
+            
             return np.concatenate(
                 (
                     data.qpos.copy()[self.body_idxs][2:],
