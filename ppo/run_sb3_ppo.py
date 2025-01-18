@@ -168,33 +168,53 @@ def visualize_policy(model, env_name, num_episodes=5):
     """
     import os
     import imageio
-    
+    import mujoco
+    from humanoid_bench.traj_recorder import TrajRecorder
     os.makedirs("videos", exist_ok=True)
     
-    env = gym.make(env_name)
-    env = TimeLimit(env, max_episode_steps=1000)
+    env = gym.make(env_name, render_mode="human")
+    
+    dof_names = list([mujoco.mj_id2name(env.get_wrapper_attr('model'), mujoco.mjtObj.mjOBJ_JOINT, i) for i in range(env.get_wrapper_attr('model').njnt)])
+    recorder = TrajRecorder(dof_names,
+                            robot_name=env.get_wrapper_attr('robot').name,
+                            save_id=ARGS.env_name,
+                            file_save_folder="/home/haozhechen/Projects/RoboVerse/third_party/humanoid-bench/Trajectory")
     
     for episode in range(num_episodes):
         obs, _ = env.reset()
         done = False
         truncated = False
         episode_frames = []
+        import time
+        # while True:
+        #     env.render()
+        #     time.sleep(0.1)
+        #     print(env.unwrapped.task._env.viewer._paused)
+
+        env.unwrapped.task._env.viewer._paused = True
         
+        recorder.update(action=None, state=None, env=env, verbose=False, auto_format=True, auto_quit=False)
+
         while not (done or truncated):
             action = model.predict(obs, deterministic=True)[0]
             obs, reward, done, truncated, info = env.step(action)
+
+            recorder.update(action, state=None, env=env, verbose=False, auto_format=True, auto_quit=False)
+
             frame = env.render()
             episode_frames.append(frame)
         
-        # Convert frames to video and save
-        video = np.stack(episode_frames)
+        recorder.save_and_start_new()
+
+        # # Convert frames to video and save
+        # video = np.stack(episode_frames)
         
-        # Save locally as MP4
-        video_path = f"videos/episode_{episode}.mp4"
-        imageio.mimsave(video_path, episode_frames, fps=100)
-        print(f"Saved video to {video_path}")
+        # # Save locally as MP4
+        # video_path = f"videos/episode_{episode}.mp4"
+        # imageio.mimsave(video_path, episode_frames, fps=10)
+        # print(f"Saved video to {video_path}")
         
-        wandb.log({f"evaluation/episode_{episode}_video": wandb.Video(video, fps=100, format="gif")})
+        # wandb.log({f"evaluation/episode_{episode}_video": wandb.Video(video, fps=10, format="gif")})
     
     env.close()
 
@@ -237,19 +257,18 @@ def test(model, env_name, num_episodes=5):
 def main(argv):
     env = SubprocVecEnv([make_env(i) for i in range(ARGS.num_envs)])
     
-    run = wandb.init(
-        entity=ARGS.wandb_entity,
-        project="humanoid-bench",
-        name=f"ppo_{ARGS.env_name}",
-        sync_tensorboard=True,
-        monitor_gym=True,
-        save_code=True,
-    )
-    
-    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=f"runs/{run.id}", 
-                learning_rate=float(ARGS.learning_rate), batch_size=512)
-    
     if ARGS.train_or_test == "train":
+        run = wandb.init(
+            entity=ARGS.wandb_entity,
+            project="humanoid-bench",
+            name=f"ppo_{ARGS.env_name}",
+            sync_tensorboard=True,
+            monitor_gym=True,
+            save_code=True,
+        )
+        
+        model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=f"runs/{run.id}", 
+                    learning_rate=float(ARGS.learning_rate), batch_size=512)
         model = train(
             run,
             model,

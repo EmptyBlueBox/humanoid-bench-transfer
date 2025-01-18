@@ -2,20 +2,48 @@ import os
 import pickle
 import time
 from pprint import pp
+import copy
 
 class TrajRecorder:
     def __init__(self, dof_names, robot_name='h1',save_id="",
+                 max_trajectory_frame=float('inf'), # default to record all frames
                  file_save_folder='./trajectory'):
         self.robot_name = robot_name
         self.file_save_folder = file_save_folder
         self.save_id = save_id
-        self.max_trajectory_frame = 250
+        self.max_trajectory_frame = max_trajectory_frame
         self.dof_names = dof_names
-        self.actions = []
-        self.states = []
+        self.start_new_record()
 
-    def update(self, action, state, verbose=False):
-        self.actions.append(action)
+    def update(self, action=None, state=None, env=None, 
+               verbose=False, auto_format=False, auto_quit=False):
+        """
+        If formatted flag set True, pass raw action and env
+        Else, pass formatted action and formatted state
+        """
+        if auto_format:
+            assert env is not None and state is None, "auto_format only works with raw action and env"
+            action = {
+                "dof_pos_target":{
+                    k:v for k,v in zip(self.dof_names[1:],action)
+                }
+            } if action is not None else None
+            state = {
+                env.get_wrapper_attr('robot').name:{
+                    "pos": env.get_wrapper_attr('data').qpos[:3],
+                    "rot": env.get_wrapper_attr('data').qpos[3:7],
+                    "dof_pos": {k:v for k,v in zip(self.dof_names[1:],env.get_wrapper_attr('data').qpos[7:])}
+                }
+            }
+        else:
+            assert state is not None, "state must be provided if auto_format is False"
+        
+
+        action = copy.deepcopy(action)
+        state = copy.deepcopy(state)
+
+        if action is not None:
+            self.actions.append(action)
         self.states.append(state)
         if verbose:
             print("\n"*2+f"{'actions':=^30}")
@@ -24,13 +52,25 @@ class TrajRecorder:
             pp(self.states[-2:])
 
         if len(self.states) >= self.max_trajectory_frame:
-            self.save_trajectory_to_file()
-            exit()
+            self.save_and_start_new()
+            if auto_quit:
+                exit()
 
-    def save_trajectory_to_file(self,
+    def start_new_record(self):
+        self.actions = []
+        self.states = []
+
+    def save_and_start_new(self, file_name=None):
+        if len(self.states) == 0:
+            return
+        self._save_trajectory_to_file(file_name)
+        self.start_new_record()
+
+
+    def _save_trajectory_to_file(self,
                                 file_name=None):
         if file_name is None:
-            file_name = f"{self.save_id}_{time.time():.0f}_traj_v2.pkl"
+            file_name = f"{self.save_id}_{time.strftime('%m%d%H%M%S')}_traj_v2.pkl"
         trajectory_data = {
             self.robot_name: [{
                 "actions": self.actions,
@@ -73,4 +113,4 @@ class TrajRecorder:
         with open(save_path, 'wb') as f:
             pickle.dump(trajectory_data, f)
         
-        print(f"Trajectory saved to {save_path}")
+        print(f"Trajectory saved to {save_path}, length: {len(self.states)}")
