@@ -21,11 +21,15 @@ class TrajRecorder:
         If formatted flag set True, pass raw action and env
         Else, pass formatted action and formatted state
         """
+        
+        action = copy.deepcopy(action)
+
         if auto_format:
             assert env is not None and state is None, "auto_format only works with raw action and env"
             action = {
                 "dof_pos_target":{
-                    k:v for k,v in zip(self.dof_names[1:],action)
+                    k:v for k,v in zip(self.dof_names[1:],
+                                       env.task.unnormalize_action(action))
                 }
             } if action is not None else None
             state = {
@@ -38,8 +42,6 @@ class TrajRecorder:
         else:
             assert state is not None, "state must be provided if auto_format is False"
         
-
-        action = copy.deepcopy(action)
         state = copy.deepcopy(state)
 
         if action is not None:
@@ -70,7 +72,7 @@ class TrajRecorder:
     def _save_trajectory_to_file(self,
                                 file_name=None):
         if file_name is None:
-            file_name = f"{self.save_id}_{time.strftime('%m%d%H%M%S')}_traj_v2.pkl"
+            file_name = f"{self.save_id}_{time.strftime('%m%d_%H%M%S')}_traj_v2.pkl"
         trajectory_data = {
             self.robot_name: [{
                 "actions": self.actions,

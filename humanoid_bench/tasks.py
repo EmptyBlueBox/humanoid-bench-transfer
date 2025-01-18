@@ -7,7 +7,7 @@ import mujoco
 class Task:
     qpos0_robot = {}
     dof = 0
-    frame_skip = 10
+    frame_skip = 10 # decimation
     camera_name = "cam_default"
     max_episode_steps = 1000
     kwargs = {}  # Default kwargs for a task
@@ -29,8 +29,11 @@ class Task:
         return None
 
     def get_obs(self):
-        position = self._env.data.qpos.flat.copy()
-        velocity = self._env.data.qvel.flat.copy()
+        # the humanoid robot has a float base
+        # qpos = [x, y, z, qw, qx, qy, qz, j1, j2, ..., jn]
+        # qvel = [vx, vy, vz, wx, wy, wz, j1, j2, ..., jn] (angular velocity xyz, not quaternion wxyz) 
+        position = self._env.data.qpos.flat.copy() # self.robot.dof
+        velocity = self._env.data.qvel.flat.copy() # self.robot.dof - 1
         state = np.concatenate((position, velocity))
         return state
 

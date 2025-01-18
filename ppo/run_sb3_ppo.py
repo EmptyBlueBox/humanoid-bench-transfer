@@ -178,6 +178,7 @@ def visualize_policy(model, env_name, num_episodes=5):
     recorder = TrajRecorder(dof_names,
                             robot_name=env.get_wrapper_attr('robot').name,
                             save_id=ARGS.env_name,
+                            max_trajectory_frame=1000,
                             file_save_folder="/home/haozhechen/Projects/RoboVerse/third_party/humanoid-bench/Trajectory")
     
     for episode in range(num_episodes):
