@@ -1,8 +1,34 @@
-<mujocoinclude>
+
+<mujoco model="h1_pos_slide">
+    <visual>
+        <map force="0.1" fogend="10" shadowclip="5" />
+        <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0" />
+        <!--<quality shadowsize="16384" offsamples="16"/>-->
+        <quality shadowsize="16384"/>
+    </visual>
+
     <asset>
+        <texture type="skybox" builtin="gradient" rgb1=".9 .9 .9" rgb2=".9 .9 .9" width="100" height="100"/>
+        <texture builtin="checker" height="100" width="100" name="texplane" rgb1="0.9 0.9 0.9" rgb2="0.9 0.9 0.9" type="2d" mark="edge" markrgb="0.7 0.7 0.7"/>
+        <material name="MatPlane" reflectance="0" shininess="1" specular="0.5" texrepeat="20 20" texture="texplane"/>
         <mesh name="slide" vertex="0.3 5 0  0.3 -5 0  5.3 5 1.75  5.3 -5 1.75  10.3 5 0  10.3 -5 0"/>
+        <material name="black" rgba="0.1 0.1 0.1 1"/>
+        <material name="white" rgba="1 1 1 1"/>
     </asset>
+
+    <default>
+        <default class="h1">
+            <default class="visual">
+                <geom contype="0" conaffinity="0" group="2" material="black"/>
+            </default>
+            <default class="collision">
+                <geom group="3" mass="10000" density="0"/>
+            </default>
+        </default>
+    </default>
+
     <worldbody>
+        <light pos="0 0 10" dir="0 0 -1" directional="true" ambient="0.1 0.1 0.1" diffuse="0.5 0.5 0.5" specular="0.3 0.3 0.3"/>
         <body name="slides" pos="0 0 0">
             <geom type="mesh" mesh="slide" pos="0 0 0" rgba="0.6 0.6 0.6 1" class="visual"/>
             <geom type="mesh" mesh="slide" pos="10 0 0" rgba="0.6 0.6 0.6 1" class="visual"/>
@@ -24,8 +50,9 @@
             <geom type="mesh" mesh="slide" pos="70 0 0"  class="collision"/>
             <geom type="mesh" mesh="slide" pos="80 0 0"  class="collision"/>
         </body>
+
         <geom type="box" pos="48.85 -5.15 4" size="53 0.15 4" class="collision"/>
         <geom type="box" pos="48.85 5.15 4" size="53 0.15 4" class="collision"/>
         <geom type="box" pos="-4 0 4" size="0.15 5.15 4" class="collision"/>
     </worldbody>
-</mujocoinclude>
+</mujoco>
