@@ -2,6 +2,7 @@
 # Define TASK
 export TASK="h1-walk-v0"
 export TASK="h1-run-v0"
+export TASK="h1-slide-v0"
 export WANDB_ENTITY="lyt0112-peking-university"
 
 # Train TD-MPC2
@@ -13,6 +14,9 @@ python -m embodied.agents.dreamerv3.train --configs humanoid_benchmark --run.wan
 # Train SAC
 # Failed
 python ./jaxrl_m/examples/mujoco/run_mujoco_sac.py --env_name ${TASK} --wandb_entity ${WANDB_ENTITY} --seed 0
+
+# Train PPO (not using MJX)
+python ./ppo/run_sb3_ppo.py --env_name ${TASK} --wandb_entity ${WANDB_ENTITY} --seed 0
 ```
 
 Failed to train DreamerV3 for task walk (but run is successful).
