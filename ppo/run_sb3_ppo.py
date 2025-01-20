@@ -20,13 +20,13 @@ import numpy as np
 from collections import deque
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--env_name", type=str)
-parser.add_argument("--seed", type=int)
+parser.add_argument("--env_name", default="h1-slide-v0", type=str)
+parser.add_argument("--seed", default=0, type=int)
 parser.add_argument("--num_envs", default=4, type=int)
 parser.add_argument("--learning_rate", default=3e-5, type=float)
 parser.add_argument("--max_steps", default=20000000, type=int)
-parser.add_argument("--wandb_entity", default="change this to your wandb entity, like lyt0112-peking-university", type=str)
-parser.add_argument("--model_path", default="/home/descfly/humanoid-bench-transfer/models/k7teg6s0/model.zip", type=str)
+parser.add_argument("--wandb_entity", default="lyt0112-peking-university", type=str)
+parser.add_argument("--model_path", default="/home/descfly/humanoid-bench-transfer/models/ymp5yy7v/model.zip", type=str)
 parser.add_argument("--train_or_test", default="train", type=str)
 ARGS = parser.parse_args()
 
@@ -166,27 +166,28 @@ def visualize_policy(model, env_name, num_episodes=5):
         env_name: Name of the environment
         num_episodes: Number of episodes to visualize
     """
-    import os
-    import imageio
+    # import os
+    # import imageio
     import mujoco
     from humanoid_bench.traj_recorder import TrajRecorder
-    os.makedirs("videos", exist_ok=True)
+    # os.makedirs("videos", exist_ok=True)
     
-    env = gym.make(env_name, render_mode="human")
+    # env = gym.make(env_name, render_mode="human")
+    env = gym.make(env_name)
     
     dof_names = list([mujoco.mj_id2name(env.get_wrapper_attr('model'), mujoco.mjtObj.mjOBJ_JOINT, i) for i in range(env.get_wrapper_attr('model').njnt)])
     recorder = TrajRecorder(dof_names,
                             robot_name=env.get_wrapper_attr('robot').name,
                             save_id=ARGS.env_name,
                             max_trajectory_frame=1000,
-                            file_save_folder="/home/haozhechen/Projects/RoboVerse/third_party/humanoid-bench/Trajectory")
+                            file_save_folder="/home/descfly/humanoid-bench-transfer/Trajectory")
     
     for episode in range(num_episodes):
         obs, _ = env.reset()
         done = False
         truncated = False
         episode_frames = []
-        import time
+        # import time
         # while True:
         #     env.render()
         #     time.sleep(0.1)
