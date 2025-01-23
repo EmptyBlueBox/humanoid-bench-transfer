@@ -17,6 +17,10 @@ python ./jaxrl_m/examples/mujoco/run_mujoco_sac.py --env_name ${TASK} --wandb_en
 
 # Train PPO (not using MJX)
 python ./ppo/run_sb3_ppo.py --env_name ${TASK} --wandb_entity ${WANDB_ENTITY} --seed 0
+
+# Test PPO
+python ./ppo/run_sb3_ppo.py --env_name ${TASK} --wandb_entity ${WANDB_ENTITY} --seed 0 --train_or_test test
+
 ```
 
 Failed to train DreamerV3 for task walk (but run is successful).
