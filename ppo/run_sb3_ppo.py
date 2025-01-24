@@ -25,9 +25,10 @@ parser.add_argument("--seed", type=int)
 parser.add_argument("--num_envs", default=4, type=int)
 parser.add_argument("--learning_rate", default=3e-5, type=float)
 parser.add_argument("--max_steps", default=20000000, type=int)
+parser.add_argument("--use_wandb", action="store_true")
 parser.add_argument("--wandb_entity", default="change this to your wandb entity, like lyt0112-peking-university", type=str)
 parser.add_argument("--model_path", default="/home/descfly/humanoid-bench-transfer/models/k7teg6s0/model.zip", type=str)
-parser.add_argument("--train_or_test", default="train", type=str)
+parser.add_argument("--train_or_eval", default="train", type=str, choices=["train", "test", "eval"])
 ARGS = parser.parse_args()
 
 
@@ -82,7 +83,8 @@ class EvalCallback(BaseCallback):
             video.append(pixels)
 
         video = np.stack(video)
-        wandb.log({"results/video": wandb.Video(video, fps=100, format="gif")})
+        if ARGS.use_wandb:
+            wandb.log({"results/video": wandb.Video(video, fps=100, format="gif")})
 
 
 class LogCallback(BaseCallback):
@@ -157,7 +159,7 @@ class EpisodeLogCallback(BaseCallback):
                 self.returns_info[key] = []
 
 
-def visualize_policy(model, env_name, num_episodes=5):
+def eval(model, env_name, num_episodes=5):
     """
     Visualize the trained policy by running episodes and saving videos locally and to wandb.
     
@@ -178,7 +180,7 @@ def visualize_policy(model, env_name, num_episodes=5):
     recorder = TrajRecorder(dof_names,
                             robot_name=env.get_wrapper_attr('robot').name,
                             save_id=ARGS.env_name,
-                            max_trajectory_frame=1000,
+                            max_trajectory_frame=800,
                             file_save_folder="/home/haozhechen/Projects/RoboVerse/third_party/humanoid-bench/Trajectory")
     
     for episode in range(num_episodes):
@@ -192,15 +194,18 @@ def visualize_policy(model, env_name, num_episodes=5):
         #     time.sleep(0.1)
         #     print(env.unwrapped.task._env.viewer._paused)
 
-        env.unwrapped.task._env.viewer._paused = True
+        # env.unwrapped.task._env.viewer._paused = True
         
-        recorder.update(action=None, state=None, env=env, verbose=False, auto_format=True, auto_quit=False)
+        recorder.update(action=None, state=None, env=env, verbose=True, auto_format=True, auto_quit=False)
 
         while not (done or truncated):
             action = model.predict(obs, deterministic=True)[0]
             obs, reward, done, truncated, info = env.step(action)
+            reach_max_traj = recorder.update(action, state=None, env=env, verbose=False, auto_format=True, auto_quit=False)
 
-            recorder.update(action, state=None, env=env, verbose=False, auto_format=True, auto_quit=False)
+            if reach_max_traj:
+                print("reach max traj")
+                break
 
             frame = env.render()
             episode_frames.append(frame)
@@ -219,6 +224,58 @@ def visualize_policy(model, env_name, num_episodes=5):
     
     env.close()
 
+
+def test(env_name, num_episodes=5):
+    """
+    Visualize the trained policy by running episodes and saving videos locally and to wandb.
+    
+    Args:
+        env_name: Name of the environment
+        num_episodes: Number of episodes to visualize
+    """
+    import os
+    import time
+    os.makedirs("videos", exist_ok=True)
+    
+    env = gym.make(env_name, render_mode="human")
+    
+    for episode in range(num_episodes):
+        obs, _ = env.reset()
+        # while True:
+        #     env.render()
+        #     time.sleep(0.1)
+        #     print(env.unwrapped.task._env.viewer._paused)
+
+        # env.unwrapped.task._env.viewer._paused = True
+
+        rewards = []
+        target_joint = 0
+        step = 0
+        while True:
+            step+=1
+            action = np.array([
+                0,0,0,0,0,
+                0,0,0,0,0,
+                0,
+                0,0,0,0,
+                0,0,0,0
+                ],dtype=np.float32)
+            action[target_joint] = np.sin(step/10)
+            # action = env.task.normalize_action(np.array([0,0,-0.4,0.8,-0.4,0,0,-0.4,0.8,-0.4,0,0,0,0,  0,  0,0,0,0]))
+            obs, reward, done, truncated, info = env.step(action)
+            rewards.append(reward)
+
+            frame = env.render()
+            # if done or truncated:
+                # break
+        
+        import matplotlib.pyplot as plt
+        plt.plot(rewards)
+        plt.savefig(f"rewards_{episode}.png")
+    
+    env.close()
+
+
 def train(run, model, max_steps):
     """
     Train the PPO agent.
@@ -234,31 +291,20 @@ def train(run, model, max_steps):
         trained model
     """
     model.learn(total_timesteps=max_steps, log_interval=1, 
-               callback=[WandbCallback(model_save_path=f"models/{run.id}",verbose=2), 
-                        EvalCallback(), LogCallback(info_keywords=[]), 
-                        EpisodeLogCallback()])
+               callback=([
+                   WandbCallback(model_save_path=f"models/{run.id}",verbose=2)] if ARGS.use_wandb else []) + [
+                    EvalCallback(), LogCallback(info_keywords=[]), 
+                    EpisodeLogCallback()])
     
     model.save("ppo")
     print("Training finished")
     return model
 
-def test(model, env_name, num_episodes=5):
-    """
-    Test and visualize the trained policy.
-    
-    Args:
-        model: Trained PPO model
-        env_name: Name of the environment
-        num_episodes: Number of episodes to visualize
-    """
-    print("Starting visualization...")
-    visualize_policy(model, env_name, num_episodes)
-    print("Visualization completed")
-
 def main(argv):
     env = SubprocVecEnv([make_env(i) for i in range(ARGS.num_envs)])
     
-    if ARGS.train_or_test == "train":
+    if ARGS.train_or_eval == "train":
+        from collections import namedtuple
         run = wandb.init(
             entity=ARGS.wandb_entity,
             project="humanoid-bench",
@@ -266,7 +312,7 @@ def main(argv):
             sync_tensorboard=True,
             monitor_gym=True,
             save_code=True,
-        )
+        ) if ARGS.use_wandb else namedtuple("Run", ["id"])(id="local")
         
         model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=f"runs/{run.id}", 
                     learning_rate=float(ARGS.learning_rate), batch_size=512)
@@ -275,11 +321,13 @@ def main(argv):
             model,
             ARGS.max_steps
         )
-    elif ARGS.train_or_test == "test":
+    elif ARGS.train_or_eval == "eval":
         model = PPO.load(ARGS.model_path)
-        test(model, ARGS.env_name)
+        eval(model, ARGS.env_name)
+    elif ARGS.train_or_eval == "test":
+        test(ARGS.env_name)
     else:
-        raise ValueError(f"Invalid value for train_or_test: {ARGS.train_or_test}")
+        raise ValueError(f"Invalid value for train_or_eval: {ARGS.train_or_eval}")
 
 if __name__ == '__main__':
     main(None)
