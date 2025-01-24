@@ -75,7 +75,7 @@ class TrajRecorder:
     def save_trajectory_to_file(self,
                                 file_name=None):
         if file_name is None:
-            file_name = f"{self.save_id}_{time.strftime('%m%d_%H%M%S')}_traj_v2.pkl"
+            file_name = f"{self.save_id}_{time.strftime('%m%d_%H%M%S')}_{int(time.time()*1000)%1000:03d}_traj_v2.pkl"
         trajectory_data = {
             self.robot_name: [{
                 "actions": self.actions,
