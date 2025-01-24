@@ -57,6 +57,9 @@ class TrajRecorder:
             self.save_and_start_new()
             if auto_quit:
                 exit()
+            return True
+        return False
+            
 
     def start_new_record(self):
         self.actions = []
@@ -65,11 +68,11 @@ class TrajRecorder:
     def save_and_start_new(self, file_name=None):
         if len(self.states) == 0:
             return
-        self._save_trajectory_to_file(file_name)
+        self.save_trajectory_to_file(file_name)
         self.start_new_record()
 
 
-    def _save_trajectory_to_file(self,
+    def save_trajectory_to_file(self,
                                 file_name=None):
         if file_name is None:
             file_name = f"{self.save_id}_{time.strftime('%m%d_%H%M%S')}_traj_v2.pkl"
