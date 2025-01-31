@@ -101,7 +101,7 @@ class VideoRecorder:
             frames = np.stack(self.frames)
             return self._wandb.log(
                 {
-                    key: self._wandb.Video(
+                    key: self._wandb.Video( # FIXED: pip install -U moviepy==1.0.3 # ref: https://github.com/wandb/wandb/issues/8971
                         frames.transpose(0, 3, 1, 2), fps=self.fps, format="mp4"
                     )
                 },

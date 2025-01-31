@@ -40,8 +40,27 @@ def make_env(cfg):
         raise ValueError("Unknown task:", cfg.task)
     import metasim.scripts.train.register_gym_env
 
+    from metasim.cfg.scenario import ScenarioMetaCfg
+    from metasim.constants import SimType
+    from metasim.utils.setup_util import get_robot, get_task
+
+    # env = gym.make(
+    #     id=cfg.task,
+    # )
+
+    task = get_task(cfg.task.split("metasim_")[-1])
+    robot = get_robot(cfg.robot)
+    scenario = ScenarioMetaCfg(task=task, robot=robot)
+    num_envs = 1
+    headless = cfg.headless
+    sim_type =SimType(cfg.sim)
+
     env = gym.make(
-        cfg.task,
+        id='metasim',
+        scenario=scenario,
+        sim_type=sim_type,
+        num_envs=num_envs,
+        headless=headless,
     )
 
     # env = HumanoidWrapper(env, cfg)

@@ -77,6 +77,9 @@ class OnlineTrainer(Trainer):
             if self._step % self.cfg.eval_freq == 0:
                 eval_next = True
 
+            if self._step % self.cfg.save_checkpoint_every == 0:
+                self.logger.save_agent(self.agent, self._step)
+
             # Reset environment
             if done:
                 if eval_next:

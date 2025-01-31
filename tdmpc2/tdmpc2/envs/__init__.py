@@ -14,21 +14,21 @@ def missing_dependencies(task):
     )
 
 
-from tdmpc2.envs.dmcontrol import make_env as make_dm_control_env
-from tdmpc2.envs.humanoid import make_env as make_humanoid_env
 from tdmpc2.envs.metasim import make_env as make_metasim_env
-try:
-    from tdmpc2.envs.maniskill import make_env as make_maniskill_env
-except:
-    make_maniskill_env = missing_dependencies
-try:
-    from tdmpc2.envs.metaworld import make_env as make_metaworld_env
-except:
-    make_metaworld_env = missing_dependencies
-try:
-    from tdmpc2.envs.myosuite import make_env as make_myosuite_env
-except:
-    make_myosuite_env = missing_dependencies
+# from tdmpc2.envs.dmcontrol import make_env as make_dm_control_env
+# from tdmpc2.envs.humanoid import make_env as make_humanoid_env
+# try:
+#     from tdmpc2.envs.maniskill import make_env as make_maniskill_env
+# except:
+#     make_maniskill_env = missing_dependencies
+# try:
+#     from tdmpc2.envs.metaworld import make_env as make_metaworld_env
+# except:
+#     make_metaworld_env = missing_dependencies
+# try:
+#     from tdmpc2.envs.myosuite import make_env as make_myosuite_env
+# except:
+#     make_myosuite_env = missing_dependencies
 
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -67,11 +67,11 @@ def make_env(cfg):
         env = None
         for fn in [
             make_metasim_env,
-            make_humanoid_env,
-            make_dm_control_env,
-            make_maniskill_env,
-            make_metaworld_env,
-            make_myosuite_env,
+            # make_humanoid_env,
+            # make_dm_control_env,
+            # make_maniskill_env,
+            # make_metaworld_env,
+            # make_myosuite_env,
         ]:
             try:
                 env = fn(cfg)
