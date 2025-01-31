@@ -1,4 +1,5 @@
 from time import time
+import os
 
 import numpy as np
 import torch
@@ -111,7 +112,7 @@ class OnlineTrainer(Trainer):
                 self._tds = [self.to_td(obs)]
 
             # Collect experience
-            if self._step > self.cfg.seed_steps:
+            if self._step > self.cfg.seed_steps or os.path.exists(self.cfg.get("checkpoint","_nonExistFile")):
                 action = self.agent.act(obs, t0=len(self._tds) == 1)
             else:
                 action = self.env.rand_act()

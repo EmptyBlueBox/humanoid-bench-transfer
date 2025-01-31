@@ -90,6 +90,7 @@ class TDMPC2:
         """
         state_dict = fp if isinstance(fp, dict) else torch.load(fp)
         self.model.load_state_dict(state_dict["model"])
+        return self
 
     @torch.no_grad()
     def act(self, obs, t0=False, eval_mode=False, task=None):
