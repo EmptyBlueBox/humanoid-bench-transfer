@@ -73,6 +73,12 @@ class OnlineTrainer(Trainer):
     def train(self):
         """Train a TD-MPC2 agent."""
         train_metrics, done, eval_next = {}, True, True
+        from pathlib import Path
+        continue_train = os.path.exists(self.cfg.get("checkpoint","_nonExistFile"))
+        if continue_train:
+            continue_train_step = int(Path(self.cfg.get("checkpoint","_nonExistFile")).stem)
+            self._step = continue_train_step
+            self.cfg.seed_steps += continue_train_step
         while self._step <= self.cfg.steps:
             # Evaluate agent periodically
             if self._step % self.cfg.eval_freq == 0:
@@ -89,7 +95,7 @@ class OnlineTrainer(Trainer):
                     self.logger.log(eval_metrics, "eval")
                     eval_next = False
 
-                if self._step > 0:
+                if (not continue_train and self._step > 0) or (continue_train and self._step > continue_train_step):
                     train_metrics.update(
                         episode_reward=torch.tensor(
                             [td["reward"] for td in self._tds[1:]]
@@ -112,7 +118,7 @@ class OnlineTrainer(Trainer):
                 self._tds = [self.to_td(obs)]
 
             # Collect experience
-            if self._step > self.cfg.seed_steps or os.path.exists(self.cfg.get("checkpoint","_nonExistFile")):
+            if self._step > self.cfg.seed_steps or continue_train:
                 action = self.agent.act(obs, t0=len(self._tds) == 1)
             else:
                 action = self.env.rand_act()
